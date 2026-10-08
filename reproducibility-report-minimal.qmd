@@ -1,10 +1,10 @@
 ---
 title: "Reproducibility Report: Maglio & Polman (2014), Study 1"
 subtitle: "Minimal version"
-author: "Your name here"
+author: "Mikka Hoffman"
 date: today
 format:
-  html:
+  pdf:
     toc: true
     toc-location: left
     embed-resources: true
@@ -108,7 +108,10 @@ Use `mutate()` and `factor()` to convert both columns. For `STN_NAME`, give
 `factor()` a `levels` argument listing the stations from west to east.
 
 ```{r}
-
+# convert direction and station name to factors
+d <- d |> 
+  mutate(DIRECTION = factor(DIRECTION),
+         STN_NAME = factor(STN_NAME, levels = c("SPAD", "STG", "B-Y", "SHER")))
 ```
 
 ## Step 4: Reproduce the analysis
@@ -119,7 +122,10 @@ Count the participants in each direction × station combination. Does it match
 the paper (202 total, 101 per platform)? Is every cell the same size?
 
 ```{r}
-
+d_count <- d |> 
+  count(DIRECTION, STN_NAME) |> 
+  pivot_wider(names_from = STN_NAME, values_from = n)
+print(d_count)
 ```
 
 ### The 2 × 4 ANOVA
@@ -128,7 +134,8 @@ Fit a two-way ANOVA with `aov()`: distance predicted by direction, station, and
 their interaction. Remember that `y ~ A * B` is shorthand for `y ~ A + B + A:B`.
 
 ```{r}
-
+anova <- aov(DISTANCE ~ DIRECTION * STN_NAME, data = d)
+summary(anova)
 ```
 
 The numbers in parentheses in "F(3, 194)" are the degrees of freedom: 3 for the
@@ -156,7 +163,19 @@ Compute it for each effect. Hint: `tidy()` from broom turns the ANOVA table into
 a tibble, with the sums of squares in a column called `sumsq`.
 
 ```{r}
+#anova table
+anova_table <- tidy(anova)
+anova_table
 
+# calculate partial eta squared
+ss_residual <- anova_table |>
+  filter(term == "Residuals") |>
+  pull(sumsq)
+
+anova_table |>
+  filter(term != "Residuals") |>
+  mutate(partial_eta_sq = sumsq/(sumsq + ss_residual)) |>
+  select(term, df, statistic, p.value, partial_eta_sq)
 ```
 
 Do your values round to the paper's .27 (station) and .20 (interaction)?
@@ -172,53 +191,138 @@ direction, run a one-way ANOVA of distance on direction, and compute ηp².
 ```{r}
 #| label: st-george
 
+#select and summarize only stg 
+stg <- d |> 
+  filter(STN_NAME == "STG")
+stg |> 
+  group_by(DIRECTION) |> 
+  summarise(mean = mean(DISTANCE),
+            n = n())
+
+#anova
+stg.anova <- aov(DISTANCE ~ DIRECTION, data = stg)
+stg.anova
+stg.anova.table <- tidy(stg.anova)
+
+#partial eta squared
+stg_ss_residual <- stg.anova.table |>
+  filter(term == "Residuals") |>
+  pull(sumsq)
+
+stg.anova.table |>
+  filter(term != "Residuals") |>
+  mutate(partial_eta_sq = sumsq/(sumsq + stg_ss_residual)) |>
+  select(term, df, statistic, p.value, partial_eta_sq)
 ```
 
 #### Spadina
 
 ```{r}
 #| label: spadina
+#select and summarize only spad 
+spad <- d |> 
+  filter(STN_NAME == "SPAD")
+spad |> 
+  group_by(DIRECTION) |> 
+  summarise(mean = mean(DISTANCE),
+            n = n())
 
+#anova
+spad.anova <- aov(DISTANCE ~ DIRECTION, data = spad)
+spad.anova
+spad.anova.table <- tidy(spad.anova)
+
+#partial eta squared
+spad_ss_residual <- spad.anova.table |>
+  filter(term == "Residuals") |>
+  pull(sumsq)
+
+spad.anova.table |>
+  filter(term != "Residuals") |>
+  mutate(partial_eta_sq = sumsq/(sumsq + spad_ss_residual)) |>
+  select(term, df, statistic, p.value, partial_eta_sq)
 ```
 
 #### Bloor-Yonge
 
 ```{r}
 #| label: bloor-yonge
+#select and summarize only b-y 
+b_y <- d |> 
+  filter(STN_NAME == "B-Y")
+b_y |> 
+  group_by(DIRECTION) |> 
+  summarise(mean = mean(DISTANCE),
+            n = n())
 
+#anova
+b_y.anova <- aov(DISTANCE ~ DIRECTION, data = b_y)
+b_y.anova
+b_y.anova.table <- tidy(b_y.anova)
+
+#partial eta squared
+b_y_ss_residual <- b_y.anova.table |>
+  filter(term == "Residuals") |>
+  pull(sumsq)
+
+b_y.anova.table |>
+  filter(term != "Residuals") |>
+  mutate(partial_eta_sq = sumsq/(sumsq + b_y_ss_residual)) |>
+  select(term, df, statistic, p.value, partial_eta_sq)
 ```
 
 #### Sherbourne
 
 ```{r}
 #| label: sherbourne
+#select and summarize only sher
+sher <- d |> 
+  filter(STN_NAME == "SHER")
+sher |> 
+  group_by(DIRECTION) |> 
+  summarise(mean = mean(DISTANCE),
+            n = n())
 
+#anova
+sher.anova <- aov(DISTANCE ~ DIRECTION, data = sher)
+sher.anova
+sher.anova.table <- tidy(sher.anova)
+
+#partial eta squared
+sher_ss_residual <- sher.anova.table |>
+  filter(term == "Residuals") |>
+  pull(sumsq)
+
+sher.anova.table |>
+  filter(term != "Residuals") |>
+  mutate(partial_eta_sq = sumsq/(sumsq + sher_ss_residual)) |>
+  select(term, df, statistic, p.value, partial_eta_sq)
 ```
 
 Fill in this table as you go:
 
 | Station | Paper *p* | Your *p* | Paper ηp² | Your ηp² |
 |---|---|---|---|---|
-| St. George | < .001 | | .28 | |
-| Spadina | .001 | | .20 | |
-| Bloor-Yonge | .053 | | .08 | |
-| Sherbourne | < .001 | | .24 | |
+| St. George | < .001 | < .001 | .28 | 0.28|
+| Spadina | .001 | .001 | .20 | .20 |
+| Bloor-Yonge | .053 | .053 | .08 | .08 |
+| Sherbourne | < .001 | < .001 | .24 | .024 |
 
 ## Step 5: Reflection
 
 Were you able to reproduce the results you attempted to reproduce? If not, which
 parts could you not reproduce?
 
-> ANSWER HERE
+> I was able to reproduce all of the results except for the main effect of station.
 
 How difficult was it to reproduce the results?
 
-> ANSWER HERE
+> It was fairly easy to reproduce the results, especially with this scaffolding. 
 
 What made it hard, and what made it easy? Think about the data files, the
 variable names, and how much the paper told you about the analysis.
 
-> ANSWER HERE
+> Clear and easy variable names, clean and streamlined data files, and clearly specified statistical tests helped to make reproducing results easier. Having to do some amount of data cleaning/transformation (e.g., having extra spaces in some cells, having to recode as factors) made it a bit harder, and not having available data scripts or clear analysis methods in their paper (e.g., they don't say if they analyzed data in R or SPSS) made it harder. 
 
 ## Bonus questions
 
