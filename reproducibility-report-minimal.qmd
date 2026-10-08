@@ -335,7 +335,8 @@ counts. What does that suggest about how the authors' software (SPSS) and R's
 first.
 
 ```{r}
-
+anova <- aov(DISTANCE ~ STN_NAME * DIRECTION, data = d)
+summary(anova)
 ```
 
 **2. Orientation or direction?** The paper describes the factor as
@@ -345,7 +346,10 @@ their ANOVA? Make an `orientation` column with `if_else()` and refit the model
 with it to check.
 
 ```{r}
-
+d <- d |> 
+  mutate(orientation = if_else(DIRECTION == "EAST" & STN_NUMBER>2, "toward", if_else(DIRECTION == "EAST" & STN_NUMBER<2, "away", if_else(DIRECTION == "WEST" & STN_NUMBER>2, "away", "toward")))) |> mutate(orientation = factor(orientation))
+orientation_anova <- aov(DISTANCE ~ STN_NAME * orientation, data = d)
+tidy(orientation_anova)
 ```
 
 **3. Reproduce Figure 1.** Plot the mean distance rating for each station,
@@ -354,7 +358,14 @@ split by direction, with error bars of ±1 standard error, as in the paper.
 for you.
 
 ```{r}
-
+d_summary <- d |> 
+  group_by(DIRECTION) |> 
+  summarise(mean = mean(DISTANCE))
+ggplot(data = d_summary, aes(x=STN_NAME, y = mean, color = DIRECTION, group = DIRECTION))+
+  geom_point()+
+  geom_line()
+  
+  
 ```
 
 ## Going further
